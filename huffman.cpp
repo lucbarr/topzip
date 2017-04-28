@@ -32,7 +32,7 @@ ostream &operator<<(std::ostream &os, const Cpair &m) {
     return os << "char: " << m.first << " frequency: " << m.second ;
 }
 
-void mapChar(map<unsigned char,string>& m, Node<Cpair>* root, unsigned char c, string key = ""){
+void mapChar(map<uchar,string>& m, Node<Cpair>* root, uchar c, string key = ""){
   if (root->data.first == c){
     m[c] = key;
     return ;
@@ -65,7 +65,7 @@ void printTree(const Node<Cpair>* r){
   if (r->right != NULL) printTree(r->right);
 }
 
-unsigned short bit2short( unsigned char* bytes ){
+unsigned short bit2short( uchar* bytes ){
   return (short) (((short)bytes[1]) << 8) | bytes[0];
 }
 
@@ -105,7 +105,7 @@ int main (int argc, char* argv[]){
     char c;
     // reading each character of file
     while (text.get(c)){
-      unsigned char aux = c;
+      uchar aux = c;
       frequency[aux] ++; // trick so v[c] is frequency of c;
       stream += c;
     }
@@ -118,13 +118,14 @@ int main (int argc, char* argv[]){
     // before that, we initialize the frequency list priority queue.
     priority_queue <Node<Cpair>, vector<Node<Cpair> >, greater<Node<Cpair>> >  f_list;
     Node<Cpair>* root;
-    vector<unsigned char> ch;
+    vector<uchar> ch;
     for (int i = 0 ; i < 256 ; ++i){
       if ( frequency [i] != 0 ){
-        f_list.push(Node<Cpair>(Cpair((unsigned char) i, frequency[i])));
-        ch.push_back((unsigned char) i);
+        f_list.push(Node<Cpair>(Cpair((uchar) i, frequency[i])));
+        ch.push_back((uchar) i);
       }
     }
+    // Building tree loop
     while (f_list.size() != 1){
       auto first = f_list.top();
       f_list.pop();
@@ -138,14 +139,14 @@ int main (int argc, char* argv[]){
     }
     // We instantiate a binary tree with root as
     // the main root resulted from building of the tree.
-    map<unsigned char,string> code;
     if (root!= NULL) printTree(root);
-    for (unsigned char c : ch){
+    map<uchar,string> code;
+    for (uchar c : ch){
       mapChar(code,root,c);
     }
     // Generating binary stream of digits
     string bitstream;
-    for (unsigned char c : stream){
+    for (uchar c : stream){
       bitstream += code[c];
     }
     // bitstream is the text's binary code. Now we need to pack
@@ -162,7 +163,7 @@ int main (int argc, char* argv[]){
     //                   representation.
     string unzip = unZip(bitstream, code);
     cout << "Number of characters in text:" << root->data.second << endl;
-    cout << "Number of characters in bitstream:" << ((bitstream.size() >> 3) +(bitstream.size()%8?0:1)) << endl;
+    cout << "Number of characters in bitstream:" << ((bitstream.size() >> 3) +(bitstream.size()%8?1:0)) << endl;
   }
   return 0;
 }
