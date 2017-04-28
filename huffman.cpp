@@ -12,6 +12,8 @@
 
 using namespace std;
 
+typedef unsigned char uchar;
+
 struct Cpair{
   char first;
   int second;
@@ -41,7 +43,7 @@ void mapChar(map<unsigned char,string>& m, Node<Cpair>* root, unsigned char c, s
       mapChar(m, root->right, c, key+'1');
   }
 }
-string unZip( const string& bitstream, const map<unsigned char, string>& code){
+string unZip( const string& bitstream, const map<uchar, string>& code){
   string aux;
   string unzip;
   for (size_t i = 0 ; i < bitstream.size() ; ++i){
@@ -71,21 +73,35 @@ int main (int argc, char* argv[]){
   if (argc == 1){
     cerr << "No argument given.             \n" <<
             "Usage:                         \n" << 
-            "\t~ ./topzip.out <path-to-text>\n" <<
+            "For help, run ./topzip.out -h  \n" <<
             "Aborting.                      \n";
     exit(-1);
   }
   bool zip = true;
   for (int i = 1 ; i < argc ; ++i){
-    if (strcmp(argv[i], "-u") or strcmp(argv[i], "--unzip"))
+    if (!strcmp(argv[i], "-h") or !strcmp(argv[i], "--help")){
+      cout << "Need help ? Here is how to use it:"<< endl;
+      cout << "\t~ ./topzip.out <flags> <path-to-text>\n"<< endl;
+      cout << "flags = -u or --unzip for unzipping mode"<< endl;
+      cout << "flags = -h or --help for help"<< endl;
+      return 0;
+    }
+    if (!strcmp(argv[i], "-u") or !strcmp(argv[i], "--unzip")){
+      cout << "Entered in unzipping mode." << endl;
       zip = false;
+    }
   }
-  if (true){
+  ifstream text (argv[argc-1]);
+  if (!text.is_open()){
+    cerr << "Could not open file. Aborting" << endl;
+    cerr << "(maybe you mispelled it ?)" << endl;
+    exit (-1);
+  }
+  if (zip){
     string stream;
     int frequency[256];
     memset (frequency, 0, sizeof frequency);
     string line;
-    ifstream text (argv[argc-1]);
     char c;
     // reading each character of file
     while (text.get(c)){
@@ -126,15 +142,12 @@ int main (int argc, char* argv[]){
     if (root!= NULL) printTree(root);
     for (unsigned char c : ch){
       mapChar(code,root,c);
-      cout << c << "'s code: "<< code[c] << endl;
     }
-    cout << stream ;
     // Generating binary stream of digits
     string bitstream;
     for (unsigned char c : stream){
       bitstream += code[c];
     }
-    cout << bitstream << endl;
     // bitstream is the text's binary code. Now we need to pack
     // the frequency list information into our binary .top file,
     // so we can build the tree back again and hence read the
@@ -148,8 +161,8 @@ int main (int argc, char* argv[]){
     //                   binary representation of the character's
     //                   representation.
     string unzip = unZip(bitstream, code);
-    cout << "unzipped: " << endl;
-    cout << unzip ;
+    cout << "Number of characters in text:" << root->data.second << endl;
+    cout << "Number of characters in bitstream:" << ((bitstream.size() >> 3) +(bitstream.size()%8?0:1)) << endl;
   }
   return 0;
 }
