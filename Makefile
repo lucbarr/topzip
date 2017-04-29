@@ -1,6 +1,6 @@
 CXX = g++
-SRC = huffman.cpp
-EXEC = topzip.out
+SRC = main.cpp
+EXEC = topzip
 FLAGS = --std=c++11
 
 all:
