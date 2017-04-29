@@ -6,8 +6,9 @@
 #include <utility>
 #include <queue>
 #include <map>
-
 #include <cstring>
+#include <cassert>
+
 #include "node.hpp"
 
 using namespace std;
@@ -32,6 +33,20 @@ ostream &operator<<(std::ostream &os, const Cpair &m) {
     return os << "char: " << m.first << " frequency: " << m.second ;
 }
 
+
+// Takes two characters bit representation and cast it
+// to an unsigned short:
+// i.e: uchar bits[2] = {168,2} becomes 680
+// i.e: uchar bits[2] = {0,2} becomes 520
+// i.e: uchar bits[2] = {168,0} becomes 168 
+// We simply interpret the array of two chars as
+// if they were a short (which, bitwise, are same as
+// unsigned short)
+unsigned short bit2short( uchar* bytes ){
+  return (unsigned short) (((short)bytes[1]) << 8) | bytes[0];
+}
+
+// Gets the tree and map each char to its string binary representation
 void mapChar(map<uchar,string>& m, Node<Cpair>* root, uchar c, string key = ""){
   if (root->data.first == c){
     m[c] = key;
@@ -43,11 +58,15 @@ void mapChar(map<uchar,string>& m, Node<Cpair>* root, uchar c, string key = ""){
       mapChar(m, root->right, c, key+'1');
   }
 }
-string unZip( const string& bitstream, const map<uchar, string>& code){
+
+// Gets the char => binary string mapping and text compressed string
+// (from only text code info on, without tree building protocol part)
+// and returns the unzipped text.
+string unZip( const string& bits, const map<uchar,string>& code){
   string aux;
   string unzip;
-  for (size_t i = 0 ; i < bitstream.size() ; ++i){
-    aux += bitstream[i];
+  for (size_t i = 0 ; i < bits.size() ; ++i){
+    aux += bits[i];
     for (auto it = code.begin() ; it!= code.end() ; ++it){
       if (it->second == aux){
         unzip += it->first;
@@ -59,14 +78,23 @@ string unZip( const string& bitstream, const map<uchar, string>& code){
   return unzip;
 }
 
+
+vector<Cpair> parseFrequencies(const string& bits){
+  vector<Cpair> aux;
+  int n = (int) bits[0];
+  uchar buf[2];
+  for (int i = 2; i < 3*n+2; i+=3){
+    buf[0] = bits[i+1];
+    buf[1] = bits[i+2];
+    aux.push_back(Cpair(bits[i], bit2short(buf)));
+  }
+  return aux;
+}
+
 void printTree(const Node<Cpair>* r){
   cout << r->data << endl;
   if (r->left != NULL) printTree(r->left);
   if (r->right != NULL) printTree(r->right);
-}
-
-unsigned short bit2short( uchar* bytes ){
-  return (short) (((short)bytes[1]) << 8) | bytes[0];
 }
 
 int main (int argc, char* argv[]){
@@ -100,9 +128,11 @@ int main (int argc, char* argv[]){
   if (zip){
     string stream;
     int frequency[256];
+    vector<Cpair> frequencies;
     memset (frequency, 0, sizeof frequency);
     string line;
     char c;
+    char n = 0 ;
     // reading each character of file
     while (text.get(c)){
       uchar aux = c;
@@ -121,7 +151,9 @@ int main (int argc, char* argv[]){
     vector<uchar> ch;
     for (int i = 0 ; i < 256 ; ++i){
       if ( frequency [i] != 0 ){
+        n++;
         f_list.push(Node<Cpair>(Cpair((uchar) i, frequency[i])));
+        frequencies.push_back((Cpair((uchar) i, frequency[i])));
         ch.push_back((uchar) i);
       }
     }
@@ -155,15 +187,39 @@ int main (int argc, char* argv[]){
     // zipped file.
     // This binary code will follow the preceding protocol:
     // a char n : 1 byte for the number of nonzero frequencies
+    // a char rem : 1 byte for the number of forgotten last bits
+    // (3 bits would be enough, but that's too less for a variable)
     // preceding n*3 chars (bytes) :
     //  for each 3 bytes:
     //    first byte: related character
     //    next 2 bytes: the 2 bytes corresponding to the short
     //                   binary representation of the character's
     //                   representation.
+
+    // First we complete final bits
+    char rem = 0;
+    for (size_t i = 0 ; i < bitstream.size()%8 ; ++i){
+      rem ++;
+      bitstream += '0';
+    }
+    assert (bitstream.size()%8 == 0);
+    string prefix;
+    prefix += n;
+    prefix += rem;
+    for (auto f: frequencies){
+      uchar buf[2];
+      unsigned short aux = (short) f.second;
+      buf[1] = (char) (aux>> 8);
+      buf[0] = (char) (aux);
+      prefix += f.first;
+      prefix += buf[0];
+      prefix += buf[1];
+    }
+    bitstream = prefix+bitstream;
+    parseFrequencies(bitstream);
     string unzip = unZip(bitstream, code);
     cout << "Number of characters in text:" << root->data.second << endl;
-    cout << "Number of characters in bitstream:" << ((bitstream.size() >> 3) +(bitstream.size()%8?1:0)) << endl;
+    cout << "Number of characters in bitstream:" << (bitstream.size() >> 3) << endl;
   }
   return 0;
 }
