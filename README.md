@@ -17,6 +17,10 @@ After that, run the executable
 
         ~ ./topzip.out <path-to-text>
 
+For unzipping, go as:
+
+        ~ ./topzip.out --unzip <path-to-text>
+
 For help:
 
         ~ ./topzip.out --help 
