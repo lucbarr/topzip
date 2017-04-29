@@ -3,7 +3,6 @@
 
 #include <cstring>
 #include <vector>
-#include <utility>
 #include <queue>
 #include <map>
 #include <cstring>
@@ -29,7 +28,7 @@ struct Cpair{
 };
 
 
-ostream &operator<<(std::ostream &os, const Cpair &m) { 
+ostream& operator<<(std::ostream &os, const Cpair& m) { 
     return os << "char: " << m.first << " frequency: " << m.second ;
 }
 
@@ -57,6 +56,22 @@ void mapChar(map<uchar,string>& m, Node<Cpair>* root, uchar c, string key = ""){
     if (root->right!= NULL)
       mapChar(m, root->right, c, key+'1');
   }
+}
+
+unsigned char byte2char ( const string& byte ){
+  char aux = 0;
+  for (int i = 7 ; i >= 0 ; --i){
+    aux = aux | ((byte[7-i]-'0') << i);
+  }
+  return aux;
+}
+
+map<uchar, string> getMap (Node<Cpair>* root, const vector<Cpair>& f){
+  map<uchar, string> code;
+  for (auto v : f){
+    mapChar(code, root, v.first);
+  }
+  return code;
 }
 
 // Gets the char => binary string mapping and text compressed string
@@ -91,6 +106,26 @@ vector<Cpair> parseFrequencies(const string& bits){
   return aux;
 }
 
+Node<Cpair>* buildTree (const vector<Cpair>& list){
+  Node<Cpair>* root;
+  priority_queue <Node<Cpair>, vector<Node<Cpair> >, greater<Node<Cpair>> >  f_list;
+  for (auto v : list){
+    f_list.push(Node<Cpair>(v));
+  }
+  while (f_list.size() != 1){
+    auto first = f_list.top();
+    f_list.pop();
+    auto second = f_list.top();
+    f_list.pop();
+    Cpair r('*', first.data.second+second.data.second);
+    root = new Node<Cpair> (r);
+    root->left = new Node<Cpair> (first);
+    root->right = new Node<Cpair> (second);
+    f_list.push(*root);
+  }
+  return root;
+}
+
 void printTree(const Node<Cpair>* r){
   cout << r->data << endl;
   if (r->left != NULL) printTree(r->left);
@@ -119,8 +154,10 @@ int main (int argc, char* argv[]){
       zip = false;
     }
   }
-  ifstream text (argv[argc-1]);
-  if (!text.is_open()){
+  ifstream in (argv[argc-1]);
+  ofstream out;
+  out.open(strcat(argv[argc-1],".top"));
+  if (!in.is_open()){
     cerr << "Could not open file. Aborting" << endl;
     cerr << "(maybe you mispelled it ?)" << endl;
     exit (-1);
@@ -134,7 +171,7 @@ int main (int argc, char* argv[]){
     char c;
     char n = 0 ;
     // reading each character of file
-    while (text.get(c)){
+    while (in.get(c)){
       uchar aux = c;
       frequency[aux] ++; // trick so v[c] is frequency of c;
       stream += c;
@@ -145,37 +182,19 @@ int main (int argc, char* argv[]){
     // as the sum of both. Then we push this root to the priority queue
     // and repeat the process untill we are left with only one element.
     
-    // before that, we initialize the frequency list priority queue.
-    priority_queue <Node<Cpair>, vector<Node<Cpair> >, greater<Node<Cpair>> >  f_list;
-    Node<Cpair>* root;
-    vector<uchar> ch;
     for (int i = 0 ; i < 256 ; ++i){
       if ( frequency [i] != 0 ){
         n++;
-        f_list.push(Node<Cpair>(Cpair((uchar) i, frequency[i])));
         frequencies.push_back((Cpair((uchar) i, frequency[i])));
-        ch.push_back((uchar) i);
       }
     }
-    // Building tree loop
-    while (f_list.size() != 1){
-      auto first = f_list.top();
-      f_list.pop();
-      auto second = f_list.top();
-      f_list.pop();
-      Cpair r('*', first.data.second+second.data.second);
-      root = new Node<Cpair> (r);
-      root->left = new Node<Cpair> (first);
-      root->right = new Node<Cpair> (second);
-      f_list.push(*root);
-    }
-    // We instantiate a binary tree with root as
-    // the main root resulted from building of the tree.
+    // Building tree
+    Node<Cpair>* root;
+    root = buildTree(frequencies);
+    // Print tree for debugging purposes
     if (root!= NULL) printTree(root);
-    map<uchar,string> code;
-    for (uchar c : ch){
-      mapChar(code,root,c);
-    }
+    // Map chars to its string of 1's and 0's 
+    map<uchar,string> code = getMap(root, frequencies);
     // Generating binary stream of digits
     string bitstream;
     for (uchar c : stream){
@@ -203,7 +222,9 @@ int main (int argc, char* argv[]){
       bitstream += '0';
     }
     assert (bitstream.size()%8 == 0);
+    // Packing prefix for rebuilding the tree on unzipping
     string prefix;
+    string postfix;
     prefix += n;
     prefix += rem;
     for (auto f: frequencies){
@@ -215,11 +236,15 @@ int main (int argc, char* argv[]){
       prefix += buf[0];
       prefix += buf[1];
     }
+    for (size_t i = 0; i < bitstream.size() ; i+=8){
+      postfix += byte2char(bitstream.substr(i,i+8));
+    }
     bitstream = prefix+bitstream;
-    parseFrequencies(bitstream);
-    string unzip = unZip(bitstream, code);
+    out << bitstream;
+    string unzip = unZip(bitstream.substr(3*n+2), code);
     cout << "Number of characters in text:" << root->data.second << endl;
     cout << "Number of characters in bitstream:" << (bitstream.size() >> 3) << endl;
+    cout << unzip ;
   }
   return 0;
 }
