@@ -28,7 +28,7 @@ struct Cpair{
 };
 
 
-ostream& operator<<(std::ostream &os, const Cpair& m) { 
+ostream& operator<<(std::ostream &os, const Cpair& m) {
     return os << "char: " << m.first << " frequency: " << m.second ;
 }
 
@@ -58,10 +58,18 @@ void mapChar(map<uchar,string>& m, Node<Cpair>* root, uchar c, string key = ""){
   }
 }
 
-unsigned char byte2char ( const string& byte ){
+uchar byte2char ( const string& byte ){
   char aux = 0;
   for (int i = 7 ; i >= 0 ; --i){
     aux = aux | ((byte[7-i]-'0') << i);
+  }
+  return aux;
+}
+
+string char2byte (uchar c){
+  string aux;
+  for ( int i = 7 ; i >= 0 ; --i ){
+    aux += ((1 << i) & c) ? '1' : '0';
   }
   return aux;
 }
@@ -132,6 +140,18 @@ void printTree(const Node<Cpair>* r){
   if (r->right != NULL) printTree(r->right);
 }
 
+
+string getTextBits( const string& bytes ){
+  int n = (int) bytes[0];
+  unsigned int rem = (int) bytes[1];
+  string aux = bytes.substr(3*n+2);
+  string txt;
+  for (size_t i = 0 ; i < aux.size(); ++i){
+    txt += char2byte(aux[i]);
+  }
+  return txt.substr(0,txt.size()-rem);
+}
+
 int main (int argc, char* argv[]){
   if (argc == 1){
     cerr << "No argument given.             \n" <<
@@ -150,24 +170,37 @@ int main (int argc, char* argv[]){
       return 0;
     }
     if (!strcmp(argv[i], "-u") or !strcmp(argv[i], "--unzip")){
-      cout << "Entered in unzipping mode." << endl;
       zip = false;
     }
   }
-  ifstream in (argv[argc-1]);
+  string file (argv[argc-1]);
+  if (file.size() >= 4){
+    if (file.substr(file.size()-4) == ".top" && zip){
+      cerr << "You requested to zip a .top file... That is not cool." << endl;
+      cerr << "I'll abort the program before you blow everything up." << endl;
+      cerr << "If you want to unzip, use the -u or --unzip flag on execution, i.e:" << endl;
+      cerr << "~ ./topzip.out --unzip <awesome-file>.top" << endl;
+      exit(-1);
+    }
+  }
+  ifstream in (file);
   ofstream out;
-  out.open(strcat(argv[argc-1],".top"));
-  if (!in.is_open()){
+  if (zip)
+    file+=".top";
+  else
+    file= file.substr(0,file.size()-4);
+  out.open(file);
+  if (!in.is_open() || !out.is_open()){
     cerr << "Could not open file. Aborting" << endl;
     cerr << "(maybe you mispelled it ?)" << endl;
     exit (-1);
   }
   if (zip){
+    cout << "Entered in zipping mode..." << endl;
     string stream;
     int frequency[256];
     vector<Cpair> frequencies;
     memset (frequency, 0, sizeof frequency);
-    string line;
     char c;
     char n = 0 ;
     // reading each character of file
@@ -181,7 +214,6 @@ int main (int argc, char* argv[]){
     // order of frequency into leafes of a root element with frequency
     // as the sum of both. Then we push this root to the priority queue
     // and repeat the process untill we are left with only one element.
-    
     for (int i = 0 ; i < 256 ; ++i){
       if ( frequency [i] != 0 ){
         n++;
@@ -189,11 +221,8 @@ int main (int argc, char* argv[]){
       }
     }
     // Building tree
-    Node<Cpair>* root;
-    root = buildTree(frequencies);
-    // Print tree for debugging purposes
-    if (root!= NULL) printTree(root);
-    // Map chars to its string of 1's and 0's 
+    Node<Cpair>* root = buildTree(frequencies);
+    // Map chars to its string of 1's and 0's
     map<uchar,string> code = getMap(root, frequencies);
     // Generating binary stream of digits
     string bitstream;
@@ -221,10 +250,8 @@ int main (int argc, char* argv[]){
       rem ++;
       bitstream += '0';
     }
-    assert (bitstream.size()%8 == 0);
     // Packing prefix for rebuilding the tree on unzipping
-    string prefix;
-    string postfix;
+    string prefix, postfix;
     prefix += n;
     prefix += rem;
     for (auto f: frequencies){
@@ -239,12 +266,32 @@ int main (int argc, char* argv[]){
     for (size_t i = 0; i < bitstream.size() ; i+=8){
       postfix += byte2char(bitstream.substr(i,i+8));
     }
-    bitstream = prefix+bitstream;
+    bitstream = prefix+postfix;
     out << bitstream;
-    string unzip = unZip(bitstream.substr(3*n+2), code);
-    cout << "Number of characters in text:" << root->data.second << endl;
-    cout << "Number of characters in bitstream:" << (bitstream.size() >> 3) << endl;
+    string txt = getTextBits(bitstream);
+    string unzip = unZip(txt, code);
+    cout << "Number of chars in text:" << root->data.second << endl;
+    cout << "Number of chars in bitstream:" << (bitstream.size() >> 3) << endl;
     cout << unzip ;
+  } else {
+    cout << "Entered in unzipping mode..." << endl;
+    string stream;
+    char c;
+    while (in.get(c)){
+      stream += c;
+    }
+    // Get frequency list
+    vector<Cpair> frequencies = parseFrequencies(stream);
+    // Get text side
+    string txt = getTextBits(stream); 
+    // Build Huffman's tree from frequency list
+    Node<Cpair>* root = buildTree(frequencies);
+    // Get mappings from tree
+    map<uchar,string> code = getMap(root, frequencies);
+    // Unzip the hell out of text!!
+    string unzip = unZip(txt, code);
+    cout << "Unzipped text:\n" <<  unzip;
+    out << unzip;
   }
   return 0;
 }
