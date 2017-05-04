@@ -13,6 +13,8 @@ using namespace std;
 
 typedef unsigned char uchar;
 
+// Made this struct so we could pair a character with it's frequency
+// and define proper operators so our implementation is simplified.
 struct Cpair{
   char first;
   int second;
@@ -26,7 +28,7 @@ struct Cpair{
   }
 };
 
-
+// This function defines operator for printing our data
 ostream& operator<<(std::ostream &os, const Cpair& m) {
     return os << "char: " << m.first << " frequency: " << m.second ;
 }
@@ -38,7 +40,7 @@ ostream& operator<<(std::ostream &os, const Cpair& m) {
 // i.e: uchar bits[2] = {0,2} becomes 520
 // i.e: uchar bits[2] = {168,0} becomes 168 
 // We simply interpret the array of two chars as
-// if they were a short (which, bitwise, are same as
+// if they were a short (which, bitwise, may be same as
 // unsigned short)
 unsigned short bit2short( uchar* bytes ){
   return (unsigned short) (((short)bytes[1]) << 8) | bytes[0];
@@ -57,6 +59,8 @@ void mapChar(map<uchar,string>& m, Node<Cpair>* root, uchar c, string key = ""){
   }
 }
 
+// Gets a string of ones and zeroes and returns a
+// byte (a char))
 uchar byte2char ( const string& byte ){
   char aux = 0;
   for (int i = 7 ; i >= 0 ; --i){
@@ -65,6 +69,8 @@ uchar byte2char ( const string& byte ){
   return aux;
 }
 
+// Does the same thing as previous function but the
+// other way around (takes byte and returns string)
 string char2byte (uchar c){
   string aux;
   for ( int i = 7 ; i >= 0 ; --i ){
@@ -73,6 +79,8 @@ string char2byte (uchar c){
   return aux;
 }
 
+// With the Huffman's tree's root and vector of pairs, we can generate the mappings
+// of each character to its Huffman's code. That's what this function does.
 map<uchar, string> getMap (Node<Cpair>* root, const vector<Cpair>& f){
   map<uchar, string> code;
   for (auto v : f){
@@ -100,7 +108,9 @@ string unZip( const string& bits, const map<uchar,string>& code){
   return unzip;
 }
 
-
+// Accordingly to our protocol, we use this function to get a
+// frequency list out of the bit string representation of the
+// zipped file.
 vector<Cpair> parseFrequencies(const string& bits){
   vector<Cpair> aux;
   int n = (int) bits[0];
@@ -113,6 +123,8 @@ vector<Cpair> parseFrequencies(const string& bits){
   return aux;
 }
 
+// Function for generating the tree, return it's node solely.
+// And the node is all we need to know everything about the tree.
 Node<Cpair>* buildTree (const vector<Cpair>& list){
   Node<Cpair>* root;
   priority_queue <Node<Cpair>, vector<Node<Cpair> >, greater<Node<Cpair>> >  f_list;
@@ -133,13 +145,16 @@ Node<Cpair>* buildTree (const vector<Cpair>& list){
   return root;
 }
 
+// For debugging purposes, this function takes a tree root and
+// prints it in preorder.
 void printTree(const Node<Cpair>* r){
   cout << r->data << endl;
   if (r->left != NULL) printTree(r->left);
   if (r->right != NULL) printTree(r->right);
 }
 
-
+// Simply cuts off the whole bit string representation of zipped file
+// the part related to the text.
 string getTextBits( const string& bytes ){
   int n = (int) bytes[0];
   unsigned int rem = (int) bytes[1];
@@ -208,11 +223,6 @@ int main (int argc, char* argv[]){
       frequency[aux] ++; // trick so v[c] is frequency of c;
       stream += c;
     }
-    // Building the Huffman's tree.
-    // We turn first 2 elements of the priority queue sorted in increasing
-    // order of frequency into leafes of a root element with frequency
-    // as the sum of both. Then we push this root to the priority queue
-    // and repeat the process untill we are left with only one element.
     for (int i = 0 ; i < 256 ; ++i){
       if ( frequency [i] != 0 ){
         n++;
@@ -220,6 +230,10 @@ int main (int argc, char* argv[]){
       }
     }
     // Building tree
+    // We turn first 2 elements of the priority queue sorted in increasing
+    // order of frequency into leafes of a root element with frequency
+    // as the sum of both. Then we push this root to the priority queue
+    // and repeat the process untill we are left with only one element.
     Node<Cpair>* root = buildTree(frequencies);
     // Map chars to its string of 1's and 0's
     map<uchar,string> code = getMap(root, frequencies);
@@ -242,7 +256,6 @@ int main (int argc, char* argv[]){
     //    next 2 bytes: the 2 bytes corresponding to the short
     //                   binary representation of the character's
     //                   representation.
-
     // First we complete final bits
     char rem = 0;
     for (size_t i = 0 ; i < bitstream.size()%8 ; ++i){
@@ -270,7 +283,7 @@ int main (int argc, char* argv[]){
     string txt = getTextBits(bitstream);
     string unzip = unZip(txt, code);
     cout << "Number of chars in text:" << root->data.second << endl;
-    cout << "Number of chars in bitstream:" << (bitstream.size() >> 3) << endl;
+    cout << "Number of chars in zipped file:" << (bitstream.size() >> 3) << endl;
     cout << unzip ;
   } else {
     cout << "Entered in unzipping mode..." << endl;
