@@ -1,3 +1,18 @@
+/////////////////////////////////////////////////////////////////
+// _____              _                                        //
+//|_   _|            (_)                                       //
+//  | | ___  _ __ _____ _ __                                   //
+//  | |/ _ \| '_ \_  / | '_ \                                  //
+//  | | (_) | |_) / /| | |_) |                                 //
+//  \_/\___/| .__/___|_| .__/                                  // 
+//          | |        | |                                     //
+//          |_|        |_|                                     //
+//                                                             //
+//*For instructions on how to use topzip, see README.md        //
+//*For information on this project's license, see LICENSE.md   //
+/////////////////////////////////////////////////////////////////
+
+
 #include <iostream>
 #include <fstream>
 
@@ -12,6 +27,7 @@
 using namespace std;
 
 typedef unsigned char uchar;
+
 
 // Made this struct so we could pair a character with it's frequency
 // and define proper operators so our implementation is simplified.
